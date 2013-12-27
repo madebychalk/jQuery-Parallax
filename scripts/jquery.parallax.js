@@ -80,20 +80,21 @@ https://github.com/IanLunn/jQuery-Parallax
 
       notify: function() {
         scrollTop = $window.scrollTop();
-        this.each(function(){ this.update(); });
+        this.each(function(){ this.check(scrollTop); });
       }
     };
   })();
 
   Parallax = function(jqo, options){
     this.options  = options;
+    this.originalScrollTop = 0;
+    this.ypos = 0;
+    this.started = false;
     this.$el      = jqo;
-    this.ypos = parseInt( jqo.css('backgroundPosition').split(" ")[1] );
     this.guid = guid();
     this.refresh();
 
     Pub.subscribe(this.guid, this);
-    this.update();
   };
 
 
@@ -113,9 +114,32 @@ https://github.com/IanLunn/jQuery-Parallax
       this.top = this.$el.offset().top;
     },
 
+    start: function(scrollTop) {
+      this.originalScrollTop = scrollTop || window.scrollTop();
+      this.ypos = parseInt( this.$el.css('backgroundPosition').split(" ")[1] ) || 0;
+  
+      $window.on('scroll.parallax' + this.guid, $.proxy(this.update, this) );
+      this.started = true;
+    },
+
+    stop: function() {
+      $window.off('scroll.parallax' + this.guid, $.proxy(this.update, this) );
+      this.started = false;
+    },
+
+    check: function(scrollTop) {
+      if( this._onScreen() ) {
+        if( !this.started )
+          this.start(scrollTop);
+      } else {
+        if( this.started ) {
+          this.stop();
+        }
+      }
+    },
+
     update: function() {
-      if( this._onScreen() )
-        this.$el.css('backgroundPosition', this.options.xpos + " " + (this.ypos + Math.round((this.top - (scrollTop + windowHeight)) * this.options.speed)) + "px");
+      this.$el.css('backgroundPosition', this.options.xpos + " " + (this.ypos + Math.round((this.originalScrollTop - scrollTop) * this.options.speed)) + "px");
     },
 
     destroy: function() {
